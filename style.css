@@ -7,6 +7,9 @@
     --white: #fff;
     --green: #2ecc71;
     --red: #e74c3c;
+    --font-bungee: 'Bungee', cursive;
+    --font-medieval: 'MedievalSharp', cursive;
+    --font-press-start: '"Press Start 2P"', cursive;
 }
 
 body {
@@ -16,6 +19,7 @@ body {
     margin: 0;
     padding: 20px;
     line-height: 1.6;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .container {
@@ -170,7 +174,7 @@ button.secondary:hover {
     text-align: center;
 }
 
-.result-section, .live-preview-section, .snippet-section, .generator-section {
+.result-section, .live-preview-section, .snippet-section, .generator-section, .text-customization-section {
     margin-bottom: 30px;
     padding: 20px;
     background: #fafbff;
@@ -178,101 +182,71 @@ button.secondary:hover {
     border: 1px solid var(--light-gray);
 }
 
+.text-customization-section .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.text-customization-section .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.text-customization-section .form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.text-customization-section label {
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+    font-size: 0.9em;
+}
+
+.text-customization-section input[type="text"],
+.text-customization-section select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1em;
+}
+
+.text-customization-section input[type="color"] {
+    width: 100%;
+    height: 42px;
+    padding: 5px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+
+.text-customization-section input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+}
+
+.text-customization-section input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    align-self: flex-start;
+}
+
 .generated-image, .live-preview-box img {
     width: 100%;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: block;
 }
 
 .live-preview-box {
+    position: relative;
     border: 1px solid var(--light-gray);
     border-radius: 8px;
-    padding: 20px;
+    padding: 0;
     background: var(--white);
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.preview-image-container {
-    position: relative;
-    width: 100%;
-    border-radius: 8px;
-    overflow: hidden; /* Ensures text doesn't go outside rounded corners */
-}
-
-.preview-image-container .generated-image {
-    display: block; /* Removes bottom space under image */
-}
-
-.draggable-text {
-    user-select: none;
-    padding: 5px;
-    border: 2px dashed transparent;
-    transition: border-color 0.2s;
-}
-
-.draggable-text.active {
-    border-color: rgba(255, 255, 255, 0.7);
-    z-index: 10;
-}
-
-.text-editor {
-    background: #fdfdff;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #e9e8f0;
-}
-
-.text-editor h4 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: var(--primary-color);
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-.form-group:last-child {
-    margin-bottom: 0;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    font-size: 0.9em;
-    color: #555;
-}
-
-.form-group input[type="text"],
-.form-group input[type="number"],
-.form-group select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 1em;
-    box-sizing: border-box;
-}
-
-.form-group input[type="color"] {
-    width: 100%;
-    height: 40px;
-    padding: 5px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    box-sizing: border-box;
-    cursor: pointer;
-}
-
-.form-group-row {
-    display: flex;
-    gap: 15px;
-}
-
-.form-group-row .form-group {
-    flex: 1;
+    overflow: hidden;
 }
 
 .snippet-box {

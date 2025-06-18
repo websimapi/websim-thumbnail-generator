@@ -1,13 +1,5 @@
 const { useState, useEffect, useRef } = React;
 
-const FONT_OPTIONS = [
-    { name: 'Roboto', family: '"Roboto", sans-serif' },
-    { name: 'Press Start 2P', family: '"Press Start 2P", cursive' },
-    { name: 'Bungee', family: '"Bungee", cursive' },
-    { name: 'Nosifier', family: '"Nosifier", cursive' },
-    { name: 'Cinzel Decorative', family: '"Cinzel Decorative", cursive' },
-];
-
 // --- React App for the Generator ---
 function App() {
     const [prompt, setPrompt] = useState('A beautiful fantasy castle under a starry night sky, anime art style, game title screen');
@@ -16,38 +8,14 @@ function App() {
     const [copied, setCopied] = useState(false);
     const fileInputRef = useRef(null);
 
-    // Text state
-    const [texts, setTexts] = useState([]);
-    const [activeTextId, setActiveTextId] = useState(null);
-
-    useEffect(() => {
-        // When a new image is loaded, reset texts and add a default one
-        if (generatedImage && texts.length === 0) {
-            const defaultText = {
-                id: Date.now(),
-                content: 'My Awesome Game',
-                fontFamily: FONT_OPTIONS[0].family,
-                fontSize: 60,
-                color: '#FFFFFF',
-                strokeColor: '#000000',
-                strokeWidth: 2,
-                top: 50,
-                left: 50,
-            };
-            setTexts([defaultText]);
-            setActiveTextId(defaultText.id);
-        } else if (!generatedImage) {
-            // Clear texts if image is removed
-            setTexts([]);
-            setActiveTextId(null);
-        }
-    }, [generatedImage]);
-
-    const handleTextChange = (id, field, value) => {
-        setTexts(texts.map(t => t.id === id ? { ...t, [field]: value } : t));
-    };
-
-    const activeText = texts.find(t => t.id === activeTextId);
+    // Text overlay states
+    const [titleText, setTitleText] = useState('My Awesome Game');
+    const [textColor, setTextColor] = useState('#ffffff');
+    const [fontSize, setFontSize] = useState(72);
+    const [fontFamily, setFontFamily] = useState('Bungee');
+    const [textX, setTextX] = useState(50);
+    const [textY, setTextY] = useState(50);
+    const [textShadow, setTextShadow] = useState(true);
 
     const generateImage = async () => {
         if (!prompt || isLoading) return;
@@ -59,7 +27,6 @@ function App() {
                 aspect_ratio: "16:9",
             });
             setGeneratedImage(result.url);
-            setTexts([]); // Reset text on new image generation
         } catch (error) {
             console.error("Error generating image:", error);
             alert("Failed to generate image. Please try again.");
@@ -73,7 +40,6 @@ function App() {
         if (file && !isLoading) {
             setIsLoading(true);
             setGeneratedImage(null);
-            setTexts([]); // Reset text on new image upload
             const reader = new FileReader();
             reader.onload = (e) => {
                 setGeneratedImage(e.target.result);
@@ -90,48 +56,7 @@ function App() {
 
     const isDataUrl = generatedImage && generatedImage.startsWith('data:');
 
-    const generateSnippet = () => {
-        if (!generatedImage) return null;
-
-        const textElementsHTML = texts.map(text => {
-            const textStyle = {
-                fontFamily: text.fontFamily,
-                fontSize: `${text.fontSize}px`,
-                color: text.color,
-                position: 'absolute',
-                top: `${text.top}%`,
-                left: `${text.left}%`,
-                transform: 'translate(-50%, -50%)',
-                whiteSpace: 'nowrap',
-                textShadow: `${text.strokeWidth}px ${text.strokeWidth}px 0 ${text.strokeColor}, -${text.strokeWidth}px -${text.strokeWidth}px 0 ${text.strokeColor}, ${text.strokeWidth}px -${text.strokeWidth}px 0 ${text.strokeColor}, -${text.strokeWidth}px ${text.strokeWidth}px 0 ${text.strokeColor}`
-            };
-            const styleString = Object.entries(textStyle)
-                .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`)
-                .join(' ');
-
-            // Use textContent to prevent XSS issues with user-provided content
-            const textDiv = document.createElement('div');
-            textDiv.textContent = text.content;
-            Object.assign(textDiv.style, textStyle);
-            
-            return `
-      const textEl${text.id} = document.createElement('div');
-      textEl${text.id}.textContent = \`${text.content.replace(/`/g, '\\`')}\`;
-      Object.assign(textEl${text.id}.style, JSON.parse(\`${JSON.stringify(JSON.stringify(textStyle))}\`));
-      overlay.appendChild(textEl${text.id});
-    `;
-        }).join('');
-
-        const fontLink = texts.length > 0 ? `
-    // Add Google Fonts to display text correctly
-    const fontFamilies = [...new Set([${texts.map(t => `'${t.fontFamily.split(',')[0].replace(/"/g, '')}'`).join(',')}])];
-    const fontApiUrl = \`https://fonts.googleapis.com/css2?family=\${fontFamilies.map(f => \`\${f.replace(/ /g, '+')}:wght@700\`).join('&')}&display=swap\`;
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = fontApiUrl;
-    document.head.appendChild(link);` : '';
-
-        return `
+    const snippet = generatedImage ? `
 // Code snippet to display a title screen for automated browsers.
 // Paste this into your project's main script file.
 
@@ -145,27 +70,18 @@ function App() {
     Object.assign(overlay.style, {
       position: 'fixed', top: '0', left: '0', width: '100vw',
       height: '100vh', background: '#000', zIndex: '99999',
-      display: 'flex', alignItems: 'center', justifyContent: 'center'
+      overflow: 'hidden'
     });
-    
-    const img = document.createElement('img');
-    img.src = "${generatedImage}";
-    Object.assign(img.style, {
-        position: 'absolute', top: '0', left: '0',
-        width: '100%', height: '100%', objectFit: 'cover'
-    });
-    overlay.appendChild(img);
-    
     document.body.prepend(overlay);
+
+    const imageHTML = \`<img src="${generatedImage}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="Title Screen" />\`;
     
-    ${fontLink}
-    ${textElementsHTML}
+    const textHTML = \`${titleText ? `<div style="position: absolute; top: ${textY}%; left: ${textX}%; transform: translate(-50%, -50%); color: ${textColor}; font-size: ${fontSize}px; font-family: '${fontFamily}', sans-serif; ${textShadow ? 'text-shadow: 2px 2px 8px rgba(0,0,0,0.8);' : ''} text-align: center; white-space: pre-wrap; width: 90%; line-height: 1.2;">${titleText.replace(/\\/g, '\\\\').replace(/`/g, '\\`')}</div>` : ''}\`;
+
+    overlay.innerHTML = imageHTML + textHTML;
   }
 })();
-    `.trim();
-    };
-
-    const snippet = generateSnippet();
+    `.trim() : null;
 
     const copySnippet = () => {
         navigator.clipboard.writeText(snippet).then(() => {
@@ -173,6 +89,30 @@ function App() {
             setTimeout(() => setCopied(false), 2000);
         });
     };
+
+    const textStyle = {
+        position: 'absolute',
+        top: `${textY}%`,
+        left: `${textX}%`,
+        transform: 'translate(-50%, -50%)',
+        color: textColor,
+        fontSize: `${fontSize}px`,
+        fontFamily: `'${fontFamily}', sans-serif`,
+        textShadow: textShadow ? '2px 2px 8px rgba(0,0,0,0.8)' : 'none',
+        textAlign: 'center',
+        width: '90%',
+        lineHeight: 1.2,
+        pointerEvents: 'none',
+        whiteSpace: 'pre-wrap'
+    };
+
+    const fontOptions = [
+        { name: 'Arcade', value: "'Press Start 2P'" },
+        { name: 'Fantasy', value: 'MedievalSharp' },
+        { name: 'Impact', value: 'Bungee' },
+        { name: 'Sans Serif', value: 'Arial' },
+        { name: 'Serif', value: 'Times New Roman' },
+    ];
 
     return (
         <div className="container">
@@ -220,46 +160,62 @@ function App() {
             {isLoading && <div className="loading-placeholder">Processing your image...</div>}
 
             {generatedImage && (
-                <div className="result-section">
-                    <h2>2. Customize Your Title Screen</h2>
-                    <div className="live-preview-box">
-                         <div className="preview-image-container">
-                            <img src={generatedImage} alt="Generated title screen" className="generated-image" />
-                            {texts.map(text => (
-                                <div
-                                    key={text.id}
-                                    className={`draggable-text ${activeTextId === text.id ? 'active' : ''}`}
-                                    style={{
-                                        position: 'absolute',
-                                        top: `${text.top}%`,
-                                        left: `${text.left}%`,
-                                        transform: 'translate(-50%, -50%)',
-                                        fontFamily: text.fontFamily,
-                                        fontSize: `${text.fontSize}px`,
-                                        color: text.color,
-                                        cursor: 'pointer',
-                                        whiteSpace: 'nowrap',
-                                        textShadow: `${text.strokeWidth}px ${text.strokeWidth}px 0 ${text.strokeColor}, -${text.strokeWidth}px -${text.strokeWidth}px 0 ${text.strokeColor}, ${text.strokeWidth}px -${text.strokeWidth}px 0 ${text.strokeColor}, -${text.strokeWidth}px ${text.strokeWidth}px 0 ${text.strokeColor}`,
-                                    }}
-                                    onClick={() => setActiveTextId(text.id)}
-                                >
-                                    {text.content}
-                                </div>
-                            ))}
+                <>
+                    <div className="text-customization-section">
+                        <h2>2. Add Text</h2>
+                        <div className="form-grid">
+                            <div className="form-group full-width">
+                                <label>Title Text</label>
+                                <input type="text" value={titleText} onChange={e => setTitleText(e.target.value)} placeholder="Enter title..."/>
+                            </div>
+                             <div className="form-group">
+                                <label>Font</label>
+                                <select value={fontFamily} onChange={e => setFontFamily(e.target.value)}>
+                                    {fontOptions.map(font => (
+                                        <option key={font.value} value={font.value}>{font.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Font Color</label>
+                                <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} />
+                            </div>
+                            <div className="form-group">
+                                <label>Font Size: {fontSize}px</label>
+                                <input type="range" min="12" max="200" value={fontSize} onChange={e => setFontSize(e.target.value)} />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="textShadowCheckbox">Text Shadow</label>
+                                <input type="checkbox" id="textShadowCheckbox" checked={textShadow} onChange={e => setTextShadow(e.target.checked)} />
+                            </div>
+                            <div className="form-group">
+                                <label>Position X: {textX}%</label>
+                                <input type="range" min="0" max="100" value={textX} onChange={e => setTextX(e.target.value)} />
+                            </div>
+                            <div className="form-group">
+                                <label>Position Y: {textY}%</label>
+                                <input type="range" min="0" max="100" value={textY} onChange={e => setTextY(e.target.value)} />
+                            </div>
                         </div>
-                        {renderTextEditor()}
                     </div>
-                    <div className="button-group">
-                        <button onClick={generateImage} disabled={isLoading} className="secondary">
-                            <i className="fas fa-redo"></i> Regenerate Image
-                        </button>
+                    <div className="result-section">
+                        <h2>3. Live Preview</h2>
+                         <div className="live-preview-box">
+                            <img src={generatedImage} alt="Generated title screen" className="generated-image" />
+                            {titleText && <div style={textStyle}>{titleText}</div>}
+                        </div>
+                        <div className="button-group">
+                            <button onClick={generateImage} disabled={isLoading} className="secondary">
+                                <i className="fas fa-redo"></i> Regenerate Image
+                            </button>
+                        </div>
                     </div>
-                </div>
+                </>
             )}
 
             {snippet && (
                 <div className="snippet-section">
-                    <h2>3. Use Your Image</h2>
+                    <h2>4. Use Your Image</h2>
                      {isDataUrl ? (
                         <p>Copy this snippet to show the title screen in another project. The image data is embedded in the snippet.</p>
                      ) : (
@@ -277,44 +233,6 @@ function App() {
     );
 }
 
-const renderTextEditor = () => {
-    if (!activeText) return null;
-    return (
-        <div className="text-editor">
-            <h4>Edit Text</h4>
-            <div className="form-group">
-                <label>Content</label>
-                <input type="text" value={activeText.content} onChange={e => handleTextChange(activeTextId, 'content', e.target.value)} />
-            </div>
-            <div className="form-group">
-                <label>Font</label>
-                <select value={activeText.fontFamily} onChange={e => handleTextChange(activeTextId, 'fontFamily', e.target.value)}>
-                    {FONT_OPTIONS.map(font => <option key={font.name} value={font.family}>{font.name}</option>)}
-                </select>
-            </div>
-            <div className="form-group-row">
-                <div className="form-group">
-                    <label>Size (px)</label>
-                    <input type="number" value={activeText.fontSize} min="10" max="200" onChange={e => handleTextChange(activeTextId, 'fontSize', parseInt(e.target.value, 10))} />
-                </div>
-                <div className="form-group">
-                     <label>Color</label>
-                    <input type="color" value={activeText.color} onChange={e => handleTextChange(activeTextId, 'color', e.target.value)} />
-                </div>
-            </div>
-             <div className="form-group-row">
-                <div className="form-group">
-                    <label>Stroke (px)</label>
-                    <input type="number" value={activeText.strokeWidth} min="0" max="10" onChange={e => handleTextChange(activeTextId, 'strokeWidth', parseInt(e.target.value, 10))} />
-                </div>
-                <div className="form-group">
-                     <label>Stroke Color</label>
-                    <input type="color" value={activeText.strokeColor} onChange={e => handleTextChange(activeTextId, 'strokeColor', e.target.value)} />
-                </div>
-            </div>
-        </div>
-    );
-};
 
 if (!navigator.webdriver) {
     const container = document.getElementById('root');
