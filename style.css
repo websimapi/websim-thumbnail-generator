@@ -188,6 +188,10 @@ button.secondary:hover {
     gap: 20px;
 }
 
+.text-customization-section .form-grid.three-cols {
+    grid-template-columns: repeat(3, 1fr);
+}
+
 .text-customization-section .form-group {
     display: flex;
     flex-direction: column;
@@ -231,6 +235,36 @@ button.secondary:hover {
     width: 20px;
     height: 20px;
     align-self: flex-start;
+}
+
+.sub-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--light-gray);
+}
+
+.sub-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.sub-section-header label {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 0;
+    cursor: pointer;
+}
+
+.sub-section-header input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+}
+
+.indented {
+    padding-left: 32px;
 }
 
 .generated-image, .live-preview-box img {

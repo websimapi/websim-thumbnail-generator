@@ -15,7 +15,16 @@ function App() {
     const [fontFamily, setFontFamily] = useState('Bungee');
     const [textX, setTextX] = useState(50);
     const [textY, setTextY] = useState(50);
-    const [textShadow, setTextShadow] = useState(true);
+
+    // Advanced text styling states
+    const [textStrokeEnabled, setTextStrokeEnabled] = useState(false);
+    const [strokeWidth, setStrokeWidth] = useState(1);
+    const [strokeColor, setStrokeColor] = useState('#000000');
+    const [textShadowEnabled, setTextShadowEnabled] = useState(true);
+    const [shadowColor, setShadowColor] = useState('#000000');
+    const [shadowBlur, setShadowBlur] = useState(8);
+    const [shadowOffsetX, setShadowOffsetX] = useState(2);
+    const [shadowOffsetY, setShadowOffsetY] = useState(2);
 
     const generateImage = async () => {
         if (!prompt || isLoading) return;
@@ -56,6 +65,9 @@ function App() {
 
     const isDataUrl = generatedImage && generatedImage.startsWith('data:');
 
+    const shadowStyleString = textShadowEnabled ? `text-shadow: ${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor};` : '';
+    const strokeStyleString = textStrokeEnabled ? `-webkit-text-stroke: ${strokeWidth}px ${strokeColor}; paint-order: stroke fill;` : '';
+
     const snippet = generatedImage ? `
 // Code snippet to display a title screen for automated browsers.
 // Paste this into your project's main script file.
@@ -76,7 +88,7 @@ function App() {
 
     const imageHTML = \`<img src="${generatedImage}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="Title Screen" />\`;
     
-    const textHTML = \`${titleText ? `<div style="position: absolute; top: ${textY}%; left: ${textX}%; transform: translate(-50%, -50%); color: ${textColor}; font-size: ${fontSize}px; font-family: '${fontFamily}', sans-serif; ${textShadow ? 'text-shadow: 2px 2px 8px rgba(0,0,0,0.8);' : ''} text-align: center; white-space: pre-wrap; width: 90%; line-height: 1.2;">${titleText.replace(/\\/g, '\\\\').replace(/`/g, '\\`')}</div>` : ''}\`;
+    const textHTML = \`${titleText ? `<div style="position: absolute; top: ${textY}%; left: ${textX}%; transform: translate(-50%, -50%); color: ${textColor}; font-size: ${fontSize}px; font-family: '${fontFamily}', sans-serif; ${shadowStyleString} ${strokeStyleString} text-align: center; white-space: pre-wrap; width: 90%; line-height: 1.2;">${titleText.replace(/\\/g, '\\\\').replace(/`/g, '\\`')}</div>` : ''}\`;
 
     overlay.innerHTML = imageHTML + textHTML;
   }
@@ -98,7 +110,9 @@ function App() {
         color: textColor,
         fontSize: `${fontSize}px`,
         fontFamily: `'${fontFamily}', sans-serif`,
-        textShadow: textShadow ? '2px 2px 8px rgba(0,0,0,0.8)' : 'none',
+        textShadow: textShadowEnabled ? `${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor}` : 'none',
+        WebkitTextStroke: textStrokeEnabled ? `${strokeWidth}px ${strokeColor}` : 'undefined',
+        paintOrder: textStrokeEnabled ? 'stroke fill' : 'undefined',
         textAlign: 'center',
         width: '90%',
         lineHeight: 1.2,
@@ -108,8 +122,13 @@ function App() {
 
     const fontOptions = [
         { name: 'Arcade', value: "'Press Start 2P'" },
+        { name: 'Pixel', value: 'Silkscreen' },
         { name: 'Fantasy', value: 'MedievalSharp' },
+        { name: 'Elegant', value: 'Cinzel Decorative' },
         { name: 'Impact', value: 'Bungee' },
+        { name: 'Horror', value: 'Creepster' },
+        { name: 'Sci-Fi', value: 'Orbitron' },
+        { name: 'Handwritten', value: "'Permanent Marker'" },
         { name: 'Sans Serif', value: 'Arial' },
         { name: 'Serif', value: 'Times New Roman' },
     ];
@@ -184,18 +203,60 @@ function App() {
                                 <label>Font Size: {fontSize}px</label>
                                 <input type="range" min="12" max="200" value={fontSize} onChange={e => setFontSize(e.target.value)} />
                             </div>
-                            <div className="form-group">
-                                <label htmlFor="textShadowCheckbox">Text Shadow</label>
-                                <input type="checkbox" id="textShadowCheckbox" checked={textShadow} onChange={e => setTextShadow(e.target.checked)} />
-                            </div>
-                            <div className="form-group">
+                             <div className="form-group">
                                 <label>Position X: {textX}%</label>
                                 <input type="range" min="0" max="100" value={textX} onChange={e => setTextX(e.target.value)} />
                             </div>
-                            <div className="form-group">
+                             <div className="form-group">
                                 <label>Position Y: {textY}%</label>
                                 <input type="range" min="0" max="100" value={textY} onChange={e => setTextY(e.target.value)} />
                             </div>
+                        </div>
+                        
+                        <div className="sub-section">
+                            <div className="sub-section-header">
+                                <input type="checkbox" id="textStrokeCheckbox" checked={textStrokeEnabled} onChange={e => setTextStrokeEnabled(e.target.checked)} />
+                                <label htmlFor="textStrokeCheckbox">Text Stroke</label>
+                            </div>
+                            {textStrokeEnabled && (
+                                <div className="form-grid indented">
+                                    <div className="form-group">
+                                        <label>Stroke Width: {strokeWidth}px</label>
+                                        <input type="range" min="1" max="10" value={strokeWidth} onChange={e => setStrokeWidth(e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Stroke Color</label>
+                                        <input type="color" value={strokeColor} onChange={e => setStrokeColor(e.target.value)} />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="sub-section">
+                             <div className="sub-section-header">
+                                <input type="checkbox" id="textShadowCheckbox" checked={textShadowEnabled} onChange={e => setTextShadowEnabled(e.target.checked)} />
+                                <label htmlFor="textShadowCheckbox">Text Shadow</label>
+                            </div>
+                            {textShadowEnabled && (
+                                <div className="form-grid indented">
+                                    <div className="form-group">
+                                        <label>Shadow Color</label>
+                                        <input type="color" value={shadowColor} onChange={e => setShadowColor(e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Shadow Blur: {shadowBlur}px</label>
+                                        <input type="range" min="0" max="50" value={shadowBlur} onChange={e => setShadowBlur(e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Offset X: {shadowOffsetX}px</label>
+                                        <input type="range" min="-25" max="25" value={shadowOffsetX} onChange={e => setShadowOffsetX(e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Offset Y: {shadowOffsetY}px</label>
+                                        <input type="range" min="-25" max="25" value={shadowOffsetY} onChange={e => setShadowOffsetY(e.target.value)} />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className="result-section">
