@@ -5,6 +5,7 @@ function App() {
     const [prompt, setPrompt] = useState('A beautiful fantasy castle under a starry night sky, anime art style, game title screen');
     const [isLoading, setIsLoading] = useState(false);
     const [generatedImage, setGeneratedImage] = useState(null);
+    const [isUploadedImage, setIsUploadedImage] = useState(false);
     const [copied, setCopied] = useState(false);
     const fileInputRef = useRef(null);
 
@@ -30,6 +31,7 @@ function App() {
         if (!prompt || isLoading) return;
         setIsLoading(true);
         setGeneratedImage(null);
+        setIsUploadedImage(false);
         try {
             const result = await websim.imageGen({
                 prompt: prompt,
@@ -44,22 +46,22 @@ function App() {
         }
     };
     
-    const handleImageUpload = (event) => {
+    const handleImageUpload = async (event) => {
         const file = event.target.files[0];
         if (file && !isLoading) {
             setIsLoading(true);
             setGeneratedImage(null);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setGeneratedImage(e.target.result);
-                setIsLoading(false);
-            };
-            reader.onerror = (error) => {
-                console.error("Error reading file:", error);
+            setIsUploadedImage(false);
+            try {
+                const url = await websim.upload(file);
+                setGeneratedImage(url);
+                setIsUploadedImage(true);
+            } catch (error) {
+                console.error("Error uploading file:", error);
                 alert("Failed to upload image. Please try again.");
+            } finally {
                 setIsLoading(false);
-            };
-            reader.readAsDataURL(file);
+            }
         }
     };
 
@@ -277,10 +279,10 @@ function App() {
             {snippet && (
                 <div className="snippet-section">
                     <h2>4. Use Your Image</h2>
-                     {isDataUrl ? (
-                        <p>Copy this snippet to show the title screen in another project. The image data is embedded in the snippet.</p>
+                     {isUploadedImage ? (
+                        <p>Copy this snippet to show the title screen in another project. Your uploaded image is hosted with a permanent URL.</p>
                      ) : (
-                        <p>Copy this snippet to show the title screen in another project. <strong>Note:</strong> The image URL is temporary and may expire.</p>
+                        <p>Copy this snippet to show the title screen in another project. <strong>Note:</strong> The AI-generated image URL is temporary and may expire.</p>
                      )}
                     <div className="snippet-box">
                         <pre><code>{snippet}</code></pre>
