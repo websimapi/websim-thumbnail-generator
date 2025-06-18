@@ -61,26 +61,23 @@ function App() {
         }
     };
     
-    const generateTitleWithAI = async () => {
-        if (!generatedImage || isGeneratingText) return;
+    const generateTitleWithAI = async (imageUrl, imagePromptText) => {
+        if (!imageUrl || isGeneratingText) return;
         setIsGeneratingText(true);
+        setTitleText('Generating title...'); // Placeholder text
         try {
-            const userMessages = [
-                {
-                    type: 'text',
-                    text: 'Based on the provided image, generate a short, catchy title for a video game. Respond with ONLY the title text, and nothing else.'
-                },
-                {
-                    type: 'image_url',
-                    image_url: { url: generatedImage }
-                }
-            ];
+            const userText = imagePromptText 
+                ? `The image was generated from the following prompt: "${imagePromptText}". Based on the image and its prompt, generate a short, catchy title for a video game. Respond with ONLY the title text, and nothing else.`
+                : 'Based on the provided image, generate a short, catchy title for a video game. Respond with ONLY the title text, and nothing else.';
 
             const completion = await websim.chat.completions.create({
                 messages: [
                     {
                         role: 'user',
-                        content: userMessages
+                        content: [
+                            { type: 'text', text: userText },
+                            { type: 'image_url', image_url: { url: imageUrl } }
+                        ]
                     }
                 ],
             });
@@ -89,6 +86,7 @@ function App() {
 
         } catch (error) {
             console.error("Error generating title:", error);
+            setTitleText("My Awesome Game"); // Reset on failure
             alert("Failed to generate title with AI.");
         } finally {
             setIsGeneratingText(false);
@@ -107,6 +105,9 @@ function App() {
             });
             setGeneratedImage(result.url);
             updateAltText(result.url);
+            if (titleTextEnabled) {
+                generateTitleWithAI(result.url, prompt);
+            }
         } catch (error) {
             console.error("Error generating image:", error);
             alert("Failed to generate image. Please try again.");
@@ -218,6 +219,9 @@ function App() {
             });
             setGeneratedImage(result.url);
             updateAltText(result.url);
+            if (titleTextEnabled) {
+                generateTitleWithAI(result.url, imagePrompt);
+            }
 
         } catch (error) {
             console.error("Error generating from project:", error);
@@ -238,6 +242,9 @@ function App() {
                 setGeneratedImage(url);
                 setIsUploadedImage(true);
                 updateAltText(url);
+                if (titleTextEnabled) {
+                    generateTitleWithAI(url, null);
+                }
             } catch (error) {
                 console.error("Error uploading file:", error);
                 alert("Failed to upload image. Please try again.");
@@ -406,9 +413,9 @@ function App() {
                                         <label>Title Text</label>
                                         <div className="input-group">
                                             <input type="text" value={titleText} onChange={e => setTitleText(e.target.value)} placeholder="Enter title..."/>
-                                            <button onClick={generateTitleWithAI} disabled={isGeneratingText || !generatedImage}>
+                                            <button onClick={() => generateTitleWithAI(generatedImage, isUploadedImage ? null : prompt)} disabled={isGeneratingText || !generatedImage} title="Regenerate title with AI">
                                                 {isGeneratingText ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-magic"></i>}
-                                                {isGeneratingText ? '' : ' Generate'}
+                                                {isGeneratingText ? '' : ' Regenerate'}
                                             </button>
                                         </div>
                                     </div>
