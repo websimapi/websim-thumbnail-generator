@@ -10,6 +10,10 @@ function App() {
     const [projectIdentifier, setProjectIdentifier] = useState('');
     const fileInputRef = useRef(null);
 
+    // New AI-related state
+    const [altText, setAltText] = useState('Title screen background');
+    const [isGeneratingText, setIsGeneratingText] = useState(false);
+
     // Text overlay states
     const [titleTextEnabled, setTitleTextEnabled] = useState(true);
     const [titleText, setTitleText] = useState('My Awesome Game');
@@ -29,6 +33,68 @@ function App() {
     const [shadowOffsetX, setShadowOffsetX] = useState(2);
     const [shadowOffsetY, setShadowOffsetY] = useState(2);
 
+    const updateAltText = async (imageUrl) => {
+        if (!imageUrl) return;
+        try {
+            const completion = await websim.chat.completions.create({
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are an expert in web accessibility. Describe the following image for an HTML alt attribute. The description should be concise and accurately represent the image's content and mood. For example: "A lone knight standing on a cliff overlooking a fantasy castle at sunset." Respond with ONLY the alt text description, without any quotes.`
+                    },
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'image_url',
+                                image_url: { url: imageUrl },
+                            }
+                        ]
+                    }
+                ],
+            });
+            setAltText(completion.content.trim().replace(/"/g, ''));
+        } catch (error) {
+            console.error("Error generating alt text:", error);
+            // Silently fail, keep default alt text
+            setAltText('Title screen background image');
+        }
+    };
+    
+    const generateTitleWithAI = async () => {
+        if (!generatedImage || isGeneratingText) return;
+        setIsGeneratingText(true);
+        try {
+            const userMessages = [
+                {
+                    type: 'text',
+                    text: 'Based on the provided image, generate a short, catchy title for a video game. Respond with ONLY the title text, and nothing else.'
+                },
+                {
+                    type: 'image_url',
+                    image_url: { url: generatedImage }
+                }
+            ];
+
+            const completion = await websim.chat.completions.create({
+                messages: [
+                    {
+                        role: 'user',
+                        content: userMessages
+                    }
+                ],
+            });
+            
+            setTitleText(completion.content.trim().replace(/"/g, ''));
+
+        } catch (error) {
+            console.error("Error generating title:", error);
+            alert("Failed to generate title with AI.");
+        } finally {
+            setIsGeneratingText(false);
+        }
+    };
+
     const generateImage = async () => {
         if (!prompt || loadingState) return;
         setLoadingState('prompt');
@@ -40,6 +106,7 @@ function App() {
                 aspect_ratio: "16:9",
             });
             setGeneratedImage(result.url);
+            updateAltText(result.url);
         } catch (error) {
             console.error("Error generating image:", error);
             alert("Failed to generate image. Please try again.");
@@ -150,6 +217,7 @@ function App() {
                 aspect_ratio: "16:9",
             });
             setGeneratedImage(result.url);
+            updateAltText(result.url);
 
         } catch (error) {
             console.error("Error generating from project:", error);
@@ -169,6 +237,7 @@ function App() {
                 const url = await websim.upload(file);
                 setGeneratedImage(url);
                 setIsUploadedImage(true);
+                updateAltText(url);
             } catch (error) {
                 console.error("Error uploading file:", error);
                 alert("Failed to upload image. Please try again.");
@@ -210,7 +279,7 @@ function App() {
     });
     document.body.prepend(overlay);
 
-    const imageHTML = \`<img src="${generatedImage}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="Title Screen" />\`;${textHTMLCreation}
+    const imageHTML = \`<img src="${generatedImage}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="${altText.replace(/"/g, '&quot;')}" />\`;${textHTMLCreation}
     
     ${setInnerHTML}
   }
@@ -335,7 +404,13 @@ function App() {
                                 <div className="form-grid">
                                     <div className="form-group full-width">
                                         <label>Title Text</label>
-                                        <input type="text" value={titleText} onChange={e => setTitleText(e.target.value)} placeholder="Enter title..."/>
+                                        <div className="input-group">
+                                            <input type="text" value={titleText} onChange={e => setTitleText(e.target.value)} placeholder="Enter title..."/>
+                                            <button onClick={generateTitleWithAI} disabled={isGeneratingText || !generatedImage}>
+                                                {isGeneratingText ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-magic"></i>}
+                                                {isGeneratingText ? '' : ' Generate'}
+                                            </button>
+                                        </div>
                                     </div>
                                      <div className="form-group">
                                         <label>Font</label>
@@ -414,7 +489,7 @@ function App() {
                     <div className="result-section">
                         <h2>3. Live Preview</h2>
                          <div className="live-preview-box">
-                            <img src={generatedImage} alt="Generated title screen" className="generated-image" />
+                            <img src={generatedImage} alt={altText} className="generated-image" />
                             {titleTextEnabled && titleText && <div style={textStyle}>{titleText}</div>}
                         </div>
                         <div className="button-group">
