@@ -71,7 +71,7 @@ function App() {
         setIsSaving(true);
         try {
             // Fetch the generated image and create a blob
-            const response = await fetch(generatedImage);
+            const response = await fetch(generatedImage, { mode: 'cors' });
             const blob = await response.blob();
             const file = new File([blob], "title-screen.png", { type: "image/png" });
 
