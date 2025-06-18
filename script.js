@@ -11,6 +11,7 @@ function App() {
     const fileInputRef = useRef(null);
 
     // Text overlay states
+    const [titleTextEnabled, setTitleTextEnabled] = useState(true);
     const [titleText, setTitleText] = useState('My Awesome Game');
     const [textColor, setTextColor] = useState('#ffffff');
     const [fontSize, setFontSize] = useState(72);
@@ -182,10 +183,7 @@ function App() {
     const shadowStyleString = textShadowEnabled ? `text-shadow: ${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor};` : '';
     const strokeStyleString = textStrokeEnabled ? `-webkit-text-stroke: ${strokeWidth}px ${strokeColor}; paint-order: stroke fill;` : '';
 
-    const snippet = (() => {
-        if (!generatedImage) return null;
-
-        const baseSnippet = `
+    const snippet = generatedImage ? `
 // Code snippet to display a title screen for automated browsers.
 // Paste this into your project's main script file.
 
@@ -203,30 +201,14 @@ function App() {
     });
     document.body.prepend(overlay);
 
-    const imageHTML = \`<img src="${generatedImage}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="Title Screen" />\`;`;
-
-        if (titleText) {
-            const textHTML = `
+    const imageHTML = \`<img src="${generatedImage}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="Title Screen" />\`;
     
-    const textHTML = \`<div style="position: absolute; top: ${textY}%; left: ${textX}%; transform: translate(-50%, -50%); color: ${textColor}; font-size: ${fontSize}px; font-family: '${fontFamily}', sans-serif; ${shadowStyleString} ${strokeStyleString} text-align: center; white-space: pre-wrap; width: 90%; line-height: 1.2;">${titleText.replace(/\\/g, '\\\\').replace(/`/g, '\\`')}</div>\`;
+    const textHTML = \`${titleTextEnabled && titleText ? `<div style="position: absolute; top: ${textY}%; left: ${textX}%; transform: translate(-50%, -50%); color: ${textColor}; font-size: ${fontSize}px; font-family: '${fontFamily}', sans-serif; ${shadowStyleString} ${strokeStyleString} text-align: center; white-space: pre-wrap; width: 90%; line-height: 1.2;">${titleText.replace(/\\/g, '\\\\').replace(/`/g, '\\`')}</div>` : ''}\`;
 
-    overlay.innerHTML = imageHTML + textHTML;`;
-            
-            const endSnippet = `
+    overlay.innerHTML = imageHTML + textHTML;
   }
-})();`;
-            return (baseSnippet + textHTML + endSnippet).trim();
-        } else {
-            const noTextHTML = `
-    
-    overlay.innerHTML = imageHTML;`;
-
-            const endSnippet = `
-  }
-})();`;
-            return (baseSnippet + noTextHTML + endSnippet).trim();
-        }
-    })();
+})();
+    `.trim() : null;
 
     const copySnippet = () => {
         navigator.clipboard.writeText(snippet).then(() => {
@@ -336,89 +318,96 @@ function App() {
             {generatedImage && (
                 <>
                     <div className="text-customization-section">
-                        <h2>2. Add Text</h2>
-                        <div className="form-grid">
-                            <div className="form-group full-width">
-                                <label>Title Text</label>
-                                <input type="text" value={titleText} onChange={e => setTitleText(e.target.value)} placeholder="Enter title..."/>
-                            </div>
-                             <div className="form-group">
-                                <label>Font</label>
-                                <select value={fontFamily} onChange={e => setFontFamily(e.target.value)}>
-                                    {fontOptions.map(font => (
-                                        <option key={font.value} value={font.value}>{font.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Font Color</label>
-                                <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} />
-                            </div>
-                            <div className="form-group">
-                                <label>Font Size: {fontSize}px</label>
-                                <input type="range" min="12" max="200" value={fontSize} onChange={e => setFontSize(e.target.value)} />
-                            </div>
-                             <div className="form-group">
-                                <label>Position X: {textX}%</label>
-                                <input type="range" min="0" max="100" value={textX} onChange={e => setTextX(e.target.value)} />
-                            </div>
-                             <div className="form-group">
-                                <label>Position Y: {textY}%</label>
-                                <input type="range" min="0" max="100" value={textY} onChange={e => setTextY(e.target.value)} />
-                            </div>
+                        <div className="sub-section-header">
+                             <input type="checkbox" id="titleTextCheckbox" checked={titleTextEnabled} onChange={e => setTitleTextEnabled(e.target.checked)} />
+                             <label htmlFor="titleTextCheckbox" style={{fontSize: '1.5em', color: 'var(--primary-color)'}}>2. Add Text</label>
                         </div>
-                        
-                        <div className="sub-section">
-                            <div className="sub-section-header">
-                                <input type="checkbox" id="textStrokeCheckbox" checked={textStrokeEnabled} onChange={e => setTextStrokeEnabled(e.target.checked)} />
-                                <label htmlFor="textStrokeCheckbox">Text Stroke</label>
-                            </div>
-                            {textStrokeEnabled && (
-                                <div className="form-grid indented">
-                                    <div className="form-group">
-                                        <label>Stroke Width: {strokeWidth}px</label>
-                                        <input type="range" min="1" max="10" value={strokeWidth} onChange={e => setStrokeWidth(e.target.value)} />
+                        {titleTextEnabled && (
+                            <>
+                                <div className="form-grid">
+                                    <div className="form-group full-width">
+                                        <label>Title Text</label>
+                                        <input type="text" value={titleText} onChange={e => setTitleText(e.target.value)} placeholder="Enter title..."/>
+                                    </div>
+                                     <div className="form-group">
+                                        <label>Font</label>
+                                        <select value={fontFamily} onChange={e => setFontFamily(e.target.value)}>
+                                            {fontOptions.map(font => (
+                                                <option key={font.value} value={font.value}>{font.name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="form-group">
-                                        <label>Stroke Color</label>
-                                        <input type="color" value={strokeColor} onChange={e => setStrokeColor(e.target.value)} />
+                                        <label>Font Color</label>
+                                        <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Font Size: {fontSize}px</label>
+                                        <input type="range" min="12" max="200" value={fontSize} onChange={e => setFontSize(e.target.value)} />
+                                    </div>
+                                     <div className="form-group">
+                                        <label>Position X: {textX}%</label>
+                                        <input type="range" min="0" max="100" value={textX} onChange={e => setTextX(e.target.value)} />
+                                    </div>
+                                     <div className="form-group">
+                                        <label>Position Y: {textY}%</label>
+                                        <input type="range" min="0" max="100" value={textY} onChange={e => setTextY(e.target.value)} />
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                                
+                                <div className="sub-section">
+                                    <div className="sub-section-header">
+                                        <input type="checkbox" id="textStrokeCheckbox" checked={textStrokeEnabled} onChange={e => setTextStrokeEnabled(e.target.checked)} />
+                                        <label htmlFor="textStrokeCheckbox">Text Stroke</label>
+                                    </div>
+                                    {textStrokeEnabled && (
+                                        <div className="form-grid indented">
+                                            <div className="form-group">
+                                                <label>Stroke Width: {strokeWidth}px</label>
+                                                <input type="range" min="1" max="10" value={strokeWidth} onChange={e => setStrokeWidth(e.target.value)} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Stroke Color</label>
+                                                <input type="color" value={strokeColor} onChange={e => setStrokeColor(e.target.value)} />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
 
-                        <div className="sub-section">
-                             <div className="sub-section-header">
-                                <input type="checkbox" id="textShadowCheckbox" checked={textShadowEnabled} onChange={e => setTextShadowEnabled(e.target.checked)} />
-                                <label htmlFor="textShadowCheckbox">Text Shadow</label>
-                            </div>
-                            {textShadowEnabled && (
-                                <div className="form-grid indented">
-                                    <div className="form-group">
-                                        <label>Shadow Color</label>
-                                        <input type="color" value={shadowColor} onChange={e => setShadowColor(e.target.value)} />
+                                <div className="sub-section">
+                                     <div className="sub-section-header">
+                                        <input type="checkbox" id="textShadowCheckbox" checked={textShadowEnabled} onChange={e => setTextShadowEnabled(e.target.checked)} />
+                                        <label htmlFor="textShadowCheckbox">Text Shadow</label>
                                     </div>
-                                    <div className="form-group">
-                                        <label>Shadow Blur: {shadowBlur}px</label>
-                                        <input type="range" min="0" max="50" value={shadowBlur} onChange={e => setShadowBlur(e.target.value)} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Offset X: {shadowOffsetX}px</label>
-                                        <input type="range" min="-25" max="25" value={shadowOffsetX} onChange={e => setShadowOffsetX(e.target.value)} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Offset Y: {shadowOffsetY}px</label>
-                                        <input type="range" min="-25" max="25" value={shadowOffsetY} onChange={e => setShadowOffsetY(e.target.value)} />
-                                    </div>
+                                    {textShadowEnabled && (
+                                        <div className="form-grid indented">
+                                            <div className="form-group">
+                                                <label>Shadow Color</label>
+                                                <input type="color" value={shadowColor} onChange={e => setShadowColor(e.target.value)} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Shadow Blur: {shadowBlur}px</label>
+                                                <input type="range" min="0" max="50" value={shadowBlur} onChange={e => setShadowBlur(e.target.value)} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Offset X: {shadowOffsetX}px</label>
+                                                <input type="range" min="-25" max="25" value={shadowOffsetX} onChange={e => setShadowOffsetX(e.target.value)} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Offset Y: {shadowOffsetY}px</label>
+                                                <input type="range" min="-25" max="25" value={shadowOffsetY} onChange={e => setShadowOffsetY(e.target.value)} />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
+                            </>
+                        )}
                     </div>
                     <div className="result-section">
                         <h2>3. Live Preview</h2>
                          <div className="live-preview-box">
                             <img src={generatedImage} alt="Generated title screen" className="generated-image" />
-                            {titleText && <div style={textStyle}>{titleText}</div>}
+                            {titleTextEnabled && titleText && <div style={textStyle}>{titleText}</div>}
                         </div>
                         <div className="button-group">
                             <button onClick={generateImage} disabled={!!loadingState} className="secondary">
