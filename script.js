@@ -116,7 +116,7 @@ function App() {
             let promptHistory = [];
             if (revisionsRes.ok) {
                 const revisionsData = await revisionsRes.json();
-                promptHistory = revisionsData.data
+                promptHistory = revisionsData.revisions.data
                     .map(item => item.site?.prompt?.text)
                     .filter(Boolean)
                     .reverse(); // oldest to newest
