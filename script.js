@@ -33,9 +33,28 @@ function App() {
     const [shadowOffsetX, setShadowOffsetX] = useState(2);
     const [shadowOffsetY, setShadowOffsetY] = useState(2);
 
+    // Helper to convert image URL to data URL to prevent API errors
+    const imageUrlToDataUrl = async (url) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.error("Error converting image to data URL:", error);
+            // Return original URL as a fallback
+            return url;
+        }
+    };
+
     const updateAltText = async (imageUrl) => {
         if (!imageUrl) return;
         try {
+            const imageDataUrl = await imageUrlToDataUrl(imageUrl);
             const completion = await websim.chat.completions.create({
                 messages: [
                     {
@@ -47,7 +66,7 @@ function App() {
                         content: [
                             {
                                 type: 'image_url',
-                                image_url: { url: imageUrl },
+                                image_url: { url: imageDataUrl },
                             }
                         ]
                     }
@@ -66,6 +85,7 @@ function App() {
         setIsGeneratingText(true);
         setTitleText('Generating title...'); // Placeholder text
         try {
+            const imageDataUrl = await imageUrlToDataUrl(imageUrl);
             const userText = imagePromptText 
                 ? `The image was generated from the following prompt: "${imagePromptText}". Based on the image and its prompt, generate a short, catchy title for a video game. Respond with ONLY the title text, and nothing else.`
                 : 'Based on the provided image, generate a short, catchy title for a video game. Respond with ONLY the title text, and nothing else.';
@@ -76,7 +96,7 @@ function App() {
                         role: 'user',
                         content: [
                             { type: 'text', text: userText },
-                            { type: 'image_url', image_url: { url: imageUrl } }
+                            { type: 'image_url', image_url: { url: imageDataUrl } }
                         ]
                     }
                 ],
