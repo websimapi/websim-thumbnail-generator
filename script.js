@@ -57,6 +57,7 @@ function App() {
             // 1. Parse identifier
             let projectId = null;
             let projectVersion = null;
+            let initialSite = null;
 
             const idRegex = /^[a-z0-9_-]{20}$/;
             const urlIdRegex = /websim\.com\/p\/([a-z0-9_-]{20})/;
@@ -84,6 +85,7 @@ function App() {
                     const data = await res.json();
                     projectId = data.project.id;
                     projectVersion = data.project.current_version;
+                    initialSite = data.site;
                 }
             }
             
@@ -91,12 +93,13 @@ function App() {
                 throw new Error("Invalid project identifier. Please use a project ID, URL, or slug (user/slug).");
             }
 
-            // 2. Fetch project details if version is not known
+            // 2. Fetch project details if not known
             if (!projectVersion) {
                  const res = await fetch(`/api/v1/projects/${projectId}`);
                  if (!res.ok) throw new Error(`Could not find project with ID: ${projectId}`);
                  const data = await res.json();
                  projectVersion = data.project.current_version;
+                 initialSite = data.site;
             }
 
             if (!projectVersion) {
@@ -108,16 +111,31 @@ function App() {
             if (!htmlRes.ok) throw new Error(`Could not fetch HTML for project ${projectId} version ${projectVersion}`);
             const htmlContent = await htmlRes.text();
 
-            // 4. Get image prompt from AI
+            // 4. Fetch prompt history from revisions
+            const revisionsRes = await fetch(`/api/v1/projects/${projectId}/revisions`);
+            let promptHistory = [];
+            if (revisionsRes.ok) {
+                const revisionsData = await revisionsRes.json();
+                promptHistory = revisionsData.data
+                    .map(item => item.site?.prompt?.text)
+                    .filter(Boolean)
+                    .reverse(); // oldest to newest
+            }
+            const promptHistoryText = promptHistory.length > 0
+                ? `Here is the history of prompts used for this project, from oldest to newest:\n${promptHistory.map(p => `- ${p}`).join('\n')}`
+                : "There is no available prompt history for this project.";
+
+
+            // 5. Get image prompt from AI
             const completion = await websim.chat.completions.create({
                 messages: [
                     {
                         role: "system",
-                        content: `Analyze the following HTML, CSS, and JavaScript code. Based on the code, generate a single, concise, and artistic image generation prompt for a game title screen that captures the essence of the web page. The prompt should be creative and suitable for a text-to-image AI like DALL-E. Respond with ONLY the prompt text and no other explanations or text. For example: "A vibrant, synthwave-inspired city skyline at dusk, retro gaming aesthetic, pixel art."`,
+                        content: `Analyze the following project information, which includes its code and its prompt history. Based on all of this context, generate a single, concise, and artistic image generation prompt for a game title screen that captures the essence of the web page. The prompt should be creative and suitable for a text-to-image AI like DALL-E. Respond with ONLY the prompt text and no other explanations or text. For example: "A vibrant, synthwave-inspired city skyline at dusk, retro gaming aesthetic, pixel art."`,
                     },
                     {
                         role: "user",
-                        content: `Here is the code:\n\n\`\`\`html\n${htmlContent.substring(0, 8000)}\n\`\`\``
+                        content: `${promptHistoryText}\n\nHere is the project's latest code:\n\n\`\`\`html\n${htmlContent.substring(0, 8000)}\n\`\`\``
                     },
                 ],
             });
@@ -125,7 +143,7 @@ function App() {
             const imagePrompt = completion.content.trim().replace(/"/g, '');
             setPrompt(imagePrompt);
 
-            // 5. Generate image
+            // 6. Generate image
             const result = await websim.imageGen({
                 prompt: imagePrompt,
                 aspect_ratio: "16:9",
