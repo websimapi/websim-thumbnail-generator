@@ -182,7 +182,10 @@ function App() {
     const shadowStyleString = textShadowEnabled ? `text-shadow: ${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor};` : '';
     const strokeStyleString = textStrokeEnabled ? `-webkit-text-stroke: ${strokeWidth}px ${strokeColor}; paint-order: stroke fill;` : '';
 
-    const snippet = generatedImage ? `
+    const snippet = (() => {
+        if (!generatedImage) return null;
+
+        const baseSnippet = `
 // Code snippet to display a title screen for automated browsers.
 // Paste this into your project's main script file.
 
@@ -200,14 +203,30 @@ function App() {
     });
     document.body.prepend(overlay);
 
-    const imageHTML = \`<img src="${generatedImage}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="Title Screen" />\`;
-    
-    const textHTML = \`${titleText ? `<div style="position: absolute; top: ${textY}%; left: ${textX}%; transform: translate(-50%, -50%); color: ${textColor}; font-size: ${fontSize}px; font-family: '${fontFamily}', sans-serif; ${shadowStyleString} ${strokeStyleString} text-align: center; white-space: pre-wrap; width: 90%; line-height: 1.2;">${titleText.replace(/\\/g, '\\\\').replace(/`/g, '\\`')}</div>` : ''}\`;
+    const imageHTML = \`<img src="${generatedImage}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="Title Screen" />\`;`;
 
-    overlay.innerHTML = imageHTML + textHTML;
+        if (titleText) {
+            const textHTML = `
+    
+    const textHTML = \`<div style="position: absolute; top: ${textY}%; left: ${textX}%; transform: translate(-50%, -50%); color: ${textColor}; font-size: ${fontSize}px; font-family: '${fontFamily}', sans-serif; ${shadowStyleString} ${strokeStyleString} text-align: center; white-space: pre-wrap; width: 90%; line-height: 1.2;">${titleText.replace(/\\/g, '\\\\').replace(/`/g, '\\`')}</div>\`;
+
+    overlay.innerHTML = imageHTML + textHTML;`;
+            
+            const endSnippet = `
   }
-})();
-    `.trim() : null;
+})();`;
+            return (baseSnippet + textHTML + endSnippet).trim();
+        } else {
+            const noTextHTML = `
+    
+    overlay.innerHTML = imageHTML;`;
+
+            const endSnippet = `
+  }
+})();`;
+            return (baseSnippet + noTextHTML + endSnippet).trim();
+        }
+    })();
 
     const copySnippet = () => {
         navigator.clipboard.writeText(snippet).then(() => {
