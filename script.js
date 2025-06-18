@@ -3,10 +3,11 @@ const { useState, useEffect, useRef } = React;
 // --- React App for the Generator ---
 function App() {
     const [prompt, setPrompt] = useState('A beautiful fantasy castle under a starry night sky, anime art style, game title screen');
-    const [isLoading, setIsLoading] = useState(false);
+    const [loadingState, setLoadingState] = useState(null); // null, 'prompt', 'upload', 'project'
     const [generatedImage, setGeneratedImage] = useState(null);
     const [isUploadedImage, setIsUploadedImage] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [projectIdentifier, setProjectIdentifier] = useState('');
     const fileInputRef = useRef(null);
 
     // Text overlay states
@@ -28,8 +29,8 @@ function App() {
     const [shadowOffsetY, setShadowOffsetY] = useState(2);
 
     const generateImage = async () => {
-        if (!prompt || isLoading) return;
-        setIsLoading(true);
+        if (!prompt || loadingState) return;
+        setLoadingState('prompt');
         setGeneratedImage(null);
         setIsUploadedImage(false);
         try {
@@ -42,14 +43,107 @@ function App() {
             console.error("Error generating image:", error);
             alert("Failed to generate image. Please try again.");
         } finally {
-            setIsLoading(false);
+            setLoadingState(null);
         }
     };
     
+    const generateFromProject = async () => {
+        if (!projectIdentifier || loadingState) return;
+        setLoadingState('project');
+        setGeneratedImage(null);
+        setIsUploadedImage(false);
+
+        try {
+            // 1. Parse identifier
+            let projectId = null;
+            let projectVersion = null;
+
+            const idRegex = /^[a-z0-9_-]{20}$/;
+            const urlIdRegex = /websim\.com\/p\/([a-z0-9_-]{20})/;
+            const urlSlugRegex = /websim\.com\/@([^/]+)\/([^/]+)/;
+            const slugRegex = /^([^/]+)\/([^/]+)$/;
+
+            let match;
+            if (idRegex.test(projectIdentifier)) {
+                projectId = projectIdentifier;
+            } else if ((match = projectIdentifier.match(urlIdRegex))) {
+                projectId = match[1];
+            } else {
+                let user, slug;
+                if ((match = projectIdentifier.match(urlSlugRegex))) {
+                    user = match[1];
+                    slug = match[2].split('?')[0].split('#')[0];
+                } else if ((match = projectIdentifier.match(slugRegex))) {
+                    user = match[1];
+                    slug = match[2];
+                }
+
+                if (user && slug) {
+                    const res = await fetch(`/api/v1/users/${user}/slugs/${slug}`);
+                    if (!res.ok) throw new Error(`Could not find project for slug: ${user}/${slug}`);
+                    const data = await res.json();
+                    projectId = data.project.id;
+                    projectVersion = data.project.current_version;
+                }
+            }
+            
+            if (!projectId) {
+                throw new Error("Invalid project identifier. Please use a project ID, URL, or slug (user/slug).");
+            }
+
+            // 2. Fetch project details if version is not known
+            if (!projectVersion) {
+                 const res = await fetch(`/api/v1/projects/${projectId}`);
+                 if (!res.ok) throw new Error(`Could not find project with ID: ${projectId}`);
+                 const data = await res.json();
+                 projectVersion = data.project.current_version;
+            }
+
+            if (!projectVersion) {
+                throw new Error(`Project ${projectId} has no published version.`);
+            }
+
+            // 3. Fetch project HTML
+            const htmlRes = await fetch(`/api/v1/projects/${projectId}/revisions/${projectVersion}/html`);
+            if (!htmlRes.ok) throw new Error(`Could not fetch HTML for project ${projectId} version ${projectVersion}`);
+            const htmlContent = await htmlRes.text();
+
+            // 4. Get image prompt from AI
+            const completion = await websim.chat.completions.create({
+                messages: [
+                    {
+                        role: "system",
+                        content: `Analyze the following HTML, CSS, and JavaScript code. Based on the code, generate a single, concise, and artistic image generation prompt for a game title screen that captures the essence of the web page. The prompt should be creative and suitable for a text-to-image AI like DALL-E. Respond with ONLY the prompt text and no other explanations or text. For example: "A vibrant, synthwave-inspired city skyline at dusk, retro gaming aesthetic, pixel art."`,
+                    },
+                    {
+                        role: "user",
+                        content: `Here is the code:\n\n\`\`\`html\n${htmlContent.substring(0, 8000)}\n\`\`\``
+                    },
+                ],
+            });
+            
+            const imagePrompt = completion.content.trim().replace(/"/g, '');
+            setPrompt(imagePrompt);
+
+            // 5. Generate image
+            const result = await websim.imageGen({
+                prompt: imagePrompt,
+                aspect_ratio: "16:9",
+            });
+            setGeneratedImage(result.url);
+
+        } catch (error) {
+            console.error("Error generating from project:", error);
+            alert(`Failed to generate from project: ${error.message}`);
+        } finally {
+            setLoadingState(null);
+        }
+    };
+
     const handleImageUpload = async (event) => {
         const file = event.target.files[0];
-        if (file && !isLoading) {
-            setIsLoading(true);
+        if (file && !loadingState) {
+            setLoadingState('upload');
             setGeneratedImage(null);
             setIsUploadedImage(false);
             try {
@@ -60,7 +154,7 @@ function App() {
                 console.error("Error uploading file:", error);
                 alert("Failed to upload image. Please try again.");
             } finally {
-                setIsLoading(false);
+                setLoadingState(null);
             }
         }
     };
@@ -151,11 +245,29 @@ function App() {
                         onChange={(e) => setPrompt(e.target.value)}
                         placeholder="e.g., A retro 8-bit game title screen..."
                         rows="3"
-                        disabled={isLoading}
+                        disabled={!!loadingState}
                     />
-                     <button onClick={generateImage} disabled={isLoading || !prompt}>
-                        {isLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-bolt"></i>}
-                        {isLoading ? ' Generating...' : ' Generate'}
+                     <button onClick={generateImage} disabled={!!loadingState || !prompt}>
+                        {loadingState === 'prompt' ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-bolt"></i>}
+                        {loadingState === 'prompt' ? ' Generating...' : ' Generate'}
+                    </button>
+                </div>
+
+                <div className="separator">
+                    <span>OR</span>
+                </div>
+
+                <div className="input-group">
+                    <input
+                        type="text"
+                        value={projectIdentifier}
+                        onChange={(e) => setProjectIdentifier(e.target.value)}
+                        placeholder="Websim Project ID, URL or Slug (user/slug)"
+                        disabled={!!loadingState}
+                    />
+                     <button onClick={generateFromProject} disabled={!!loadingState || !projectIdentifier}>
+                        {loadingState === 'project' ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-cogs"></i>}
+                        {loadingState === 'project' ? ' Analyzing...' : ' Analyze Project'}
                     </button>
                 </div>
 
@@ -170,15 +282,19 @@ function App() {
                         ref={fileInputRef}
                         onChange={handleImageUpload}
                         style={{ display: 'none' }}
-                        disabled={isLoading}
+                        disabled={!!loadingState}
                     />
-                    <button onClick={() => fileInputRef.current.click()} disabled={isLoading} className="secondary">
-                        <i className="fas fa-upload"></i> Upload Image
+                    <button onClick={() => fileInputRef.current.click()} disabled={!!loadingState} className="secondary">
+                        {loadingState === 'upload' ? <><i className="fas fa-spinner fa-spin"></i> Uploading...</> : <><i className="fas fa-upload"></i> Upload Image</>}
                     </button>
                 </div>
             </div>
 
-            {isLoading && <div className="loading-placeholder">Processing your image...</div>}
+            {loadingState && <div className="loading-placeholder">
+                {loadingState === 'prompt' && 'Generating your image...'}
+                {loadingState === 'upload' && 'Uploading your image...'}
+                {loadingState === 'project' && 'Analyzing project and generating image...'}
+            </div>}
 
             {generatedImage && (
                 <>
@@ -268,8 +384,11 @@ function App() {
                             {titleText && <div style={textStyle}>{titleText}</div>}
                         </div>
                         <div className="button-group">
-                            <button onClick={generateImage} disabled={isLoading} className="secondary">
-                                <i className="fas fa-redo"></i> Regenerate Image
+                            <button onClick={generateImage} disabled={!!loadingState} className="secondary">
+                                {loadingState === 'prompt' 
+                                    ? <><i className="fas fa-spinner fa-spin"></i> Regenerating...</>
+                                    : <><i className="fas fa-redo"></i> Regenerate Image</>
+                                }
                             </button>
                         </div>
                     </div>

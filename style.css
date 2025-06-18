@@ -72,7 +72,8 @@ h2 {
     margin-bottom: 20px;
 }
 
-textarea {
+textarea,
+.input-group input[type="text"] {
     flex-grow: 1;
     padding: 12px 15px;
     border-radius: 8px;
@@ -82,13 +83,15 @@ textarea {
     transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-textarea:focus {
+textarea:focus,
+.input-group input[type="text"]:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(74, 71, 163, 0.2);
 }
 
-textarea:disabled {
+textarea:disabled,
+.input-group input[type="text"]:disabled {
     background-color: #f0f0f0;
     cursor: not-allowed;
 }
